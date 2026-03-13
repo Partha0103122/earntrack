@@ -169,7 +169,7 @@
 
         .chart-wrapper {
             position: relative;
-            height: 280px;
+            height: 320px;
         }
 
         /* Employer breakdown */
@@ -416,7 +416,7 @@
             .summary-grid { grid-template-columns: 1fr 1fr; }
             .container { padding: 12px; }
             .header { padding: 12px 16px; }
-            .chart-wrapper { height: 220px; }
+            .chart-wrapper { height: 260px; }
 
             .entries-table th:nth-child(4),
             .entries-table td:nth-child(4) { display: none; }
@@ -432,6 +432,7 @@
                     <div class="sync-dot" id="syncDot"></div>
                     <span id="syncText">Synced</span>
                 </div>
+                <button class="settings-btn" onclick="manualSync()" id="syncBtn" title="Sync now">↻</button>
                 <button class="settings-btn" onclick="openSettings()">Settings</button>
             </div>
         </div>
@@ -450,16 +451,19 @@
                 <div class="summary-card">
                     <div class="label">Total Earned</div>
                     <div class="value" id="totalEarned">--</div>
+                    <div class="sub" id="totalEarnedINR" style="color:var(--primary);font-weight:600;font-size:0.85rem;"></div>
                     <div class="sub" id="totalEntries">0 entries</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">This Month</div>
                     <div class="value" id="thisMonth">--</div>
+                    <div class="sub" id="thisMonthINR" style="color:var(--primary);font-weight:600;font-size:0.85rem;"></div>
                     <div class="sub" id="thisMonthName"></div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Monthly Average</div>
                     <div class="value" id="avgMonthly">--</div>
+                    <div class="sub" id="avgMonthlyINR" style="color:var(--primary);font-weight:600;font-size:0.85rem;"></div>
                     <div class="sub">across all months</div>
                 </div>
                 <div class="summary-card">
@@ -481,6 +485,11 @@
                 <div class="chart-wrapper">
                     <canvas id="cumulativeChart"></canvas>
                 </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Monthly Breakdown</h3>
+                <div id="monthlyTable"></div>
             </div>
 
             <div class="chart-card">
@@ -652,10 +661,34 @@
         loadConfig();
         loadLocalData();
         setDefaultDate();
+        render();
         if (config.ghToken) {
             fetchFromGitHub();
         }
-        render();
+
+        // Re-sync when app returns to foreground (critical for mobile PWA)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && config.ghToken) {
+                fetchFromGitHub();
+            }
+        });
+
+        // Re-sync when coming back online
+        window.addEventListener('online', () => {
+            if (config.ghToken) {
+                showToast('Back online — syncing...');
+                fetchFromGitHub();
+            }
+        });
+    }
+
+    function manualSync() {
+        if (!config.ghToken) {
+            showToast('Configure GitHub settings first');
+            openSettings();
+            return;
+        }
+        fetchFromGitHub();
     }
 
     // ===== LOCAL STORAGE =====
@@ -691,21 +724,33 @@
         try {
             const resp = await fetch(
                 `https://api.github.com/repos/${config.ghUser}/${config.ghRepo}/contents/${config.ghPath}`,
-                { headers: { 'Authorization': `token ${config.ghToken}`, 'Accept': 'application/vnd.github.v3+json' } }
+                {
+                    headers: {
+                        'Authorization': `token ${config.ghToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Cache-Control': 'no-cache'
+                    }
+                }
             );
 
             if (resp.ok) {
                 const file = await resp.json();
-                const content = JSON.parse(atob(file.content));
-                // Merge: GitHub is source of truth
-                data = content;
-                if (!data.entries) data.entries = [];
-                if (!data.employers) data.employers = [];
+                // atob can fail on mobile if content has whitespace — use a safe decode
+                const jsonStr = decodeURIComponent(escape(atob(file.content.replace(/\s/g, ''))));
+                const content = JSON.parse(jsonStr);
+                // GitHub is source of truth
+                data = {
+                    entries: Array.isArray(content.entries) ? content.entries : [],
+                    employers: Array.isArray(content.employers) ? content.employers : []
+                };
                 saveLocalData();
                 render();
                 setSyncStatus('ok', 'Synced');
+            } else if (resp.status === 401) {
+                setSyncStatus('error', 'Auth failed');
+                showToast('GitHub token invalid or expired');
             } else if (resp.status === 404) {
-                // File doesn't exist yet, push local data
+                // File doesn't exist yet — push local data up
                 await pushToGitHub();
             } else {
                 throw new Error(`HTTP ${resp.status}`);
@@ -734,9 +779,13 @@
                 }
             } catch(e) {}
 
+            // Use a robust base64 encode that handles unicode correctly
+            const jsonString = JSON.stringify(data, null, 2);
+            const encoded = btoa(unescape(encodeURIComponent(jsonString)));
+
             const body = {
                 message: `Update earnings data - ${new Date().toISOString().split('T')[0]}`,
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
+                content: encoded,
             };
             if (sha) body.sha = sha;
 
@@ -757,7 +806,8 @@
                 setSyncStatus('ok', 'Synced');
                 showToast('Saved to GitHub!');
             } else {
-                throw new Error(`HTTP ${resp.status}`);
+                const errData = await resp.json().catch(() => ({}));
+                throw new Error(`HTTP ${resp.status}: ${errData.message || ''}`);
             }
         } catch (e) {
             console.error('Push error:', e);
@@ -889,24 +939,35 @@
     function renderSummary() {
         const total = data.entries.reduce((s, e) => s + e.amount, 0);
         document.getElementById('totalEarned').textContent = formatCurrency(total);
+        document.getElementById('totalEarnedINR').textContent = toINR(total);
         document.getElementById('totalEntries').textContent = `${data.entries.length} entries`;
 
         const now = new Date();
         const thisMonthEntries = data.entries.filter(e => {
-            const d = new Date(e.date);
+            const d = new Date(e.date + 'T00:00:00');
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         });
         const thisMonthTotal = thisMonthEntries.reduce((s, e) => s + e.amount, 0);
         document.getElementById('thisMonth').textContent = formatCurrency(thisMonthTotal);
+        document.getElementById('thisMonthINR').textContent = toINR(thisMonthTotal);
         document.getElementById('thisMonthName').textContent = now.toLocaleString('default', { month: 'long', year: 'numeric' });
 
         // Monthly average
         const months = new Set(data.entries.map(e => e.date.substring(0, 7)));
         const avg = months.size > 0 ? total / months.size : 0;
         document.getElementById('avgMonthly').textContent = formatCurrency(avg);
+        document.getElementById('avgMonthlyINR').textContent = toINR(avg);
 
         const employers = new Set(data.entries.map(e => e.employer));
         document.getElementById('employerCount').textContent = employers.size;
+    }
+
+    // EUR to INR conversion rate
+    const EUR_TO_INR = 90.5;
+
+    function toINR(eur) {
+        const inr = eur * EUR_TO_INR;
+        return '₹' + Math.round(inr).toLocaleString('en-IN');
     }
 
     function renderCharts() {
@@ -924,7 +985,7 @@
         });
         const values = sortedMonths.map(m => monthMap[m]);
 
-        // Monthly bar chart
+        // Monthly bar chart — tilt labels to avoid overlap
         if (monthlyChart) monthlyChart.destroy();
         const ctx1 = document.getElementById('monthlyChart').getContext('2d');
         monthlyChart = new Chart(ctx1, {
@@ -952,9 +1013,19 @@
                     }
                 },
                 scales: {
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            autoSkip: false,
+                            font: { size: 11 }
+                        }
+                    },
                     y: {
                         beginAtZero: true,
-                        ticks: { callback: v => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }
+                        ticks: {
+                            callback: v => '€' + v.toLocaleString('de-DE')
+                        }
                     }
                 }
             }
@@ -996,14 +1067,52 @@
                         }
                     },
                     scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: false,
+                                font: { size: 11 }
+                            }
+                        },
                         y: {
                             beginAtZero: true,
-                            ticks: { callback: v => '€' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v) }
+                            ticks: {
+                                callback: v => '€' + v.toLocaleString('de-DE')
+                            }
                         }
                     }
                 }
             });
         }
+
+        renderMonthlyTable(sortedMonths, monthMap, values);
+    }
+
+    function renderMonthlyTable(sortedMonths, monthMap, values) {
+        const container = document.getElementById('monthlyTable');
+        if (sortedMonths.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No monthly data yet.</p></div>';
+            return;
+        }
+
+        // Show most recent month first
+        const rows = [...sortedMonths].reverse().map(m => {
+            const [y, mo] = m.split('-');
+            const monthName = new Date(y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            const amount = monthMap[m];
+            return `
+                <div class="employer-item">
+                    <div>
+                        <div class="name">${monthName}</div>
+                        <div class="count">${toINR(amount)}</div>
+                    </div>
+                    <div class="amount">€${amount.toLocaleString('de-DE', { maximumFractionDigits: 2 })}</div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = rows;
     }
 
     function renderEmployerBreakdown() {
@@ -1172,8 +1281,27 @@
     // ===== SERVICE WORKER =====
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
-            .then(() => console.log('SW registered'))
+            .then(reg => {
+                console.log('SW registered');
+                // Check for updates immediately (important after sw.js changes)
+                reg.update();
+                // When a new SW is waiting, reload to activate it
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New SW installed — reload to get fresh cache
+                            window.location.reload();
+                        }
+                    });
+                });
+            })
             .catch(e => console.log('SW error:', e));
+
+        // Handle SW controller change (after skipWaiting)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+        });
     }
 
     // ===== START =====
