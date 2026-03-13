@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarnTrack</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --radius: 12px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header h1 span { opacity: 0.8; font-weight: 400; }
+
+        .settings-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .settings-btn:hover { background: rgba(255,255,255,0.25); }
+
+        /* Main container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--card);
+            padding: 4px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: var(--card);
+            padding: 18px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .summary-card .label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .summary-card .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .summary-card .sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Chart container */
+        .chart-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .chart-card h3 {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+        }
+
+        /* Employer breakdown */
+        .employer-list {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .employer-item {
+            background: var(--card);
+            padding: 14px 18px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .employer-item .name { font-weight: 600; }
+        .employer-item .amount { font-weight: 700; color: var(--primary); }
+        .employer-item .count { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* Entry form */
+        .form-card {
+            background: var(--card);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .form-card h3 {
+            font-size: 1.05rem;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group.full { grid-column: 1 / -1; }
+
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-group input, .form-group select {
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            background: white;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover { background: var(--primary-dark); }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover { background: var(--bg); }
+
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        /* Entries table */
+        .entries-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .entries-table th {
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .entries-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .entries-table tr:hover td { background: var(--bg); }
+
+        .entries-table .amount-cell {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            opacity: 0.5;
+            font-size: 1.1rem;
+            transition: opacity 0.2s;
+        }
+
+        .delete-btn:hover { opacity: 1; }
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar select, .filter-bar input {
+            padding: 8px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            background: white;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal h3 { margin-bottom: 16px; }
+
+        .modal .form-group { margin-bottom: 12px; }
+
+        .modal .btn-row { margin-top: 16px; justify-content: flex-end; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 300;
+            transition: transform 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Status indicator */
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            opacity: 0.9;
+        }
+
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .sync-dot.pending { background: var(--warning); }
+        .sync-dot.error { background: var(--danger); }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+        .empty-state p { margin-bottom: 16px; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .container { padding: 12px; }
+            .header { padding: 12px 16px; }
+            .chart-wrapper { height: 220px; }
+
+            .entries-table th:nth-child(4),
+            .entries-table td:nth-child(4) { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>EarnTrack <span>| Family Earnings</span></h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <div class="sync-status">
+                    <div class="sync-dot" id="syncDot"></div>
+                    <span id="syncText">Synced</span>
+                </div>
+                <button class="settings-btn" onclick="openSettings()">Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab" onclick="switchTab('add')">Add Entry</button>
+            <button class="tab" onclick="switchTab('entries')">All Entries</button>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="label">Total Earned</div>
+                    <div class="value" id="totalEarned">--</div>
+                    <div class="sub" id="totalEntries">0 entries</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">This Month</div>
+                    <div class="value" id="thisMonth">--</div>
+                    <div class="sub" id="thisMonthName"></div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Monthly Average</div>
+                    <div class="value" id="avgMonthly">--</div>
+                    <div class="sub">across all months</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Employers</div>
+                    <div class="value" id="employerCount">--</div>
+                    <div class="sub">unique employers</div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Monthly Earnings</h3>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Cumulative Earnings</h3>
+                <div class="chart-wrapper">
+                    <canvas id="cumulativeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Employer Breakdown</h3>
+                <div class="employer-list" id="employerBreakdown"></div>
+            </div>
+        </div>
+
+        <!-- ADD ENTRY TAB -->
+        <div id="tab-add" class="tab-content">
+            <div class="form-card">
+                <h3>Add Earning Entry</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="entryDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (€)</label>
+                        <input type="number" id="entryAmount" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Employer</label>
+                        <select id="entryEmployer">
+                            <option value="">Select or type new...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>New Employer</label>
+                        <input type="text" id="newEmployer" placeholder="Add new employer">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="entryNotes" placeholder="e.g. March salary, bonus, etc.">
+                </div>
+                <div class="btn-row" style="margin-top:16px;">
+                    <button class="btn btn-primary" onclick="addEntry()">Add Entry</button>
+                    <button class="btn btn-outline" onclick="clearForm()">Clear</button>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <h3>Quick Bulk Add</h3>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">
+                    Paste multiple entries (one per line): <code>YYYY-MM-DD, Amount, Employer, Notes</code>
+                </p>
+                <div class="form-group">
+                    <textarea id="bulkInput" rows="6" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;font-family:monospace;resize:vertical;width:100%;" placeholder="2025-01-15, 5000, ABC Corp, January salary&#10;2025-02-15, 5500, ABC Corp, February salary"></textarea>
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="bulkAdd()">Import All</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALL ENTRIES TAB -->
+        <div id="tab-entries" class="tab-content">
+            <div class="form-card">
+                <div class="filter-bar">
+                    <select id="filterEmployer" onchange="renderEntries()">
+                        <option value="">All Employers</option>
+                    </select>
+                    <select id="filterYear" onchange="renderEntries()">
+                        <option value="">All Years</option>
+                    </select>
+                    <select id="filterMonth" onchange="renderEntries()">
+                        <option value="">All Months</option>
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="entries-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Employer</th>
+                                <th>Amount</th>
+                                <th>Notes</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="entriesBody"></tbody>
+                    </table>
+                </div>
+                <div id="emptyEntries" class="empty-state" style="display:none;">
+                    <div class="icon">📊</div>
+                    <p>No entries yet. Start by adding your first earning entry!</p>
+                    <button class="btn btn-primary" onclick="switchTab('add')">Add Entry</button>
+                </div>
+                <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;">
+                    <span id="filteredTotal" style="font-weight:600;color:var(--primary);"></span>
+                    <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h3>GitHub Settings</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">
+                Connect to your GitHub repo to auto-save earnings data.
+            </p>
+            <div class="form-group">
+                <label>GitHub Username</label>
+                <input type="text" id="ghUser" placeholder="your-username">
+            </div>
+            <div class="form-group">
+                <label>Repository Name</label>
+                <input type="text" id="ghRepo" placeholder="earntrack">
+            </div>
+            <div class="form-group">
+                <label>Personal Access Token</label>
+                <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label>Data File Path</label>
+                <input type="text" id="ghPath" placeholder="data.json" value="data.json">
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-muted);margin-top:8px;">
+                Token needs <strong>repo</strong> scope. Data is stored in your browser &amp; synced to GitHub.
+            </p>
+            <div class="btn-row">
+                <button class="btn btn-outline" onclick="closeSettings()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSettings()">Save &amp; Sync</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3>Delete Entry?</h3>
+            <p style="color:var(--text-muted);margin-bottom:16px;" id="deleteMsg">Are you sure you want to delete this entry?</p>
+            <div class="btn-row">
+                <button class="btn btn-outline" onclick="closeDelete()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ===== STATE =====
+    let data = { entries: [], employers: [] };
+    let config = { ghUser: '', ghRepo: '', ghToken: '', ghPath: 'data.json' };
+    let pendingDeleteId = null;
+    let monthlyChart = null;
+    let cumulativeChart = null;
+
+    // ===== INIT =====
+    function init() {
+        loadConfig();
+        loadLocalData();
+        setDefaultDate();
+        if (config.ghToken) {
+            fetchFromGitHub();
+        }
+        render();
+    }
+
+    // ===== LOCAL STORAGE =====
+    function loadLocalData() {
+        const saved = localStorage.getItem('earntrack_data');
+        if (saved) {
+            try { data = JSON.parse(saved); } catch(e) {}
+        }
+        if (!data.entries) data.entries = [];
+        if (!data.employers) data.employers = [];
+    }
+
+    function saveLocalData() {
+        localStorage.setItem('earntrack_data', JSON.stringify(data));
+    }
+
+    function loadConfig() {
+        const saved = localStorage.getItem('earntrack_config');
+        if (saved) {
+            try { config = { ...config, ...JSON.parse(saved) }; } catch(e) {}
+        }
+    }
+
+    function saveConfig() {
+        localStorage.setItem('earntrack_config', JSON.stringify(config));
+    }
+
+    // ===== GITHUB SYNC =====
+    async function fetchFromGitHub() {
+        if (!config.ghToken || !config.ghUser || !config.ghRepo) return;
+        setSyncStatus('pending', 'Syncing...');
+
+        try {
+            const resp = await fetch(
+                `https://api.github.com/repos/${config.ghUser}/${config.ghRepo}/contents/${config.ghPath}`,
+                { headers: { 'Authorization': `token ${config.ghToken}`, 'Accept': 'application/vnd.github.v3+json' } }
+            );
+
+            if (resp.ok) {
+                const file = await resp.json();
+                const content = JSON.parse(atob(file.content));
+                // Merge: GitHub is source of truth
+                data = content;
+                if (!data.entries) data.entries = [];
+                if (!data.employers) data.employers = [];
+                saveLocalData();
+                render();
+                setSyncStatus('ok', 'Synced');
+            } else if (resp.status === 404) {
+                // File doesn't exist yet, push local data
+                await pushToGitHub();
+            } else {
+                throw new Error(`HTTP ${resp.status}`);
+            }
+        } catch (e) {
+            console.error('Fetch error:', e);
+            setSyncStatus('error', 'Sync failed');
+        }
+    }
+
+    async function pushToGitHub() {
+        if (!config.ghToken || !config.ghUser || !config.ghRepo) return;
+        setSyncStatus('pending', 'Saving...');
+
+        try {
+            // Get current file SHA if it exists
+            let sha = null;
+            try {
+                const resp = await fetch(
+                    `https://api.github.com/repos/${config.ghUser}/${config.ghRepo}/contents/${config.ghPath}`,
+                    { headers: { 'Authorization': `token ${config.ghToken}`, 'Accept': 'application/vnd.github.v3+json' } }
+                );
+                if (resp.ok) {
+                    const file = await resp.json();
+                    sha = file.sha;
+                }
+            } catch(e) {}
+
+            const body = {
+                message: `Update earnings data - ${new Date().toISOString().split('T')[0]}`,
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
+            };
+            if (sha) body.sha = sha;
+
+            const resp = await fetch(
+                `https://api.github.com/repos/${config.ghUser}/${config.ghRepo}/contents/${config.ghPath}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${config.ghToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            if (resp.ok) {
+                setSyncStatus('ok', 'Synced');
+                showToast('Saved to GitHub!');
+            } else {
+                throw new Error(`HTTP ${resp.status}`);
+            }
+        } catch (e) {
+            console.error('Push error:', e);
+            setSyncStatus('error', 'Save failed');
+            showToast('Failed to save to GitHub');
+        }
+    }
+
+    function setSyncStatus(status, text) {
+        const dot = document.getElementById('syncDot');
+        const txt = document.getElementById('syncText');
+        dot.className = 'sync-dot' + (status === 'ok' ? '' : status === 'pending' ? ' pending' : ' error');
+        txt.textContent = text;
+    }
+
+    // ===== ENTRY MANAGEMENT =====
+    function addEntry() {
+        const date = document.getElementById('entryDate').value;
+        const amount = parseFloat(document.getElementById('entryAmount').value);
+        let employer = document.getElementById('entryEmployer').value;
+        const newEmp = document.getElementById('newEmployer').value.trim();
+        const notes = document.getElementById('entryNotes').value.trim();
+
+        if (newEmp) {
+            employer = newEmp;
+            if (!data.employers.includes(employer)) {
+                data.employers.push(employer);
+            }
+        }
+
+        if (!date || isNaN(amount) || !employer) {
+            showToast('Please fill date, amount, and employer');
+            return;
+        }
+
+        data.entries.push({
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+            date,
+            amount,
+            employer,
+            notes
+        });
+
+        data.entries.sort((a, b) => b.date.localeCompare(a.date));
+        saveLocalData();
+        pushToGitHub();
+        clearForm();
+        render();
+        showToast(`Added €${amount.toLocaleString('de-DE')} from ${employer}`);
+    }
+
+    function bulkAdd() {
+        const raw = document.getElementById('bulkInput').value.trim();
+        if (!raw) return;
+
+        const lines = raw.split('\n').filter(l => l.trim());
+        let added = 0;
+
+        for (const line of lines) {
+            const parts = line.split(',').map(s => s.trim());
+            if (parts.length < 3) continue;
+
+            const [date, amountStr, employer, ...notesParts] = parts;
+            const amount = parseFloat(amountStr);
+
+            if (!date.match(/^\d{4}-\d{2}-\d{2}$/) || isNaN(amount) || !employer) continue;
+
+            if (!data.employers.includes(employer)) {
+                data.employers.push(employer);
+            }
+
+            data.entries.push({
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + added,
+                date,
+                amount,
+                employer,
+                notes: notesParts.join(', ')
+            });
+            added++;
+        }
+
+        if (added > 0) {
+            data.entries.sort((a, b) => b.date.localeCompare(a.date));
+            saveLocalData();
+            pushToGitHub();
+            render();
+            document.getElementById('bulkInput').value = '';
+            showToast(`Imported ${added} entries!`);
+        } else {
+            showToast('No valid entries found. Check format.');
+        }
+    }
+
+    function deleteEntry(id) {
+        pendingDeleteId = id;
+        const entry = data.entries.find(e => e.id === id);
+        if (entry) {
+            document.getElementById('deleteMsg').textContent =
+                `Delete €${entry.amount.toLocaleString('de-DE')} from ${entry.employer} on ${formatDate(entry.date)}?`;
+        }
+        document.getElementById('deleteModal').classList.add('active');
+    }
+
+    function confirmDelete() {
+        if (pendingDeleteId) {
+            data.entries = data.entries.filter(e => e.id !== pendingDeleteId);
+            saveLocalData();
+            pushToGitHub();
+            render();
+            showToast('Entry deleted');
+        }
+        closeDelete();
+    }
+
+    function closeDelete() {
+        pendingDeleteId = null;
+        document.getElementById('deleteModal').classList.remove('active');
+    }
+
+    // ===== RENDERING =====
+    function render() {
+        renderSummary();
+        renderCharts();
+        renderEmployerBreakdown();
+        renderEntries();
+        updateEmployerDropdowns();
+    }
+
+    function renderSummary() {
+        const total = data.entries.reduce((s, e) => s + e.amount, 0);
+        document.getElementById('totalEarned').textContent = formatCurrency(total);
+        document.getElementById('totalEntries').textContent = `${data.entries.length} entries`;
+
+        const now = new Date();
+        const thisMonthEntries = data.entries.filter(e => {
+            const d = new Date(e.date);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+        const thisMonthTotal = thisMonthEntries.reduce((s, e) => s + e.amount, 0);
+        document.getElementById('thisMonth').textContent = formatCurrency(thisMonthTotal);
+        document.getElementById('thisMonthName').textContent = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        // Monthly average
+        const months = new Set(data.entries.map(e => e.date.substring(0, 7)));
+        const avg = months.size > 0 ? total / months.size : 0;
+        document.getElementById('avgMonthly').textContent = formatCurrency(avg);
+
+        const employers = new Set(data.entries.map(e => e.employer));
+        document.getElementById('employerCount').textContent = employers.size;
+    }
+
+    function renderCharts() {
+        // Build month map
+        const monthMap = {};
+        data.entries.forEach(e => {
+            const key = e.date.substring(0, 7);
+            monthMap[key] = (monthMap[key] || 0) + e.amount;
+        });
+
+        const sortedMonths = Object.keys(monthMap).sort();
+        const labels = sortedMonths.map(m => {
+            const [y, mo] = m.split('-');
+            return new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+        });
+        const values = sortedMonths.map(m => monthMap[m]);
+
+        // Monthly bar chart
+        if (monthlyChart) monthlyChart.destroy();
+        const ctx1 = document.getElementById('monthlyChart').getContext('2d');
+        monthlyChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Earnings (€)',
+                    data: values,
+                    backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                    borderColor: '#6366f1',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => '€' + ctx.raw.toLocaleString('de-DE')
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => '€' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v) }
+                    }
+                }
+            }
+        });
+
+        // Cumulative line chart
+        let running = 0;
+        const cumulativeValues = values.map(v => { running += v; return running; });
+
+        if (cumulativeChart) cumulativeChart.destroy();
+        if (sortedMonths.length > 0) {
+            const ctx2 = document.getElementById('cumulativeChart').getContext('2d');
+            cumulativeChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Cumulative (€)',
+                        data: cumulativeValues,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#22c55e',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.35,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => 'Total: €' + ctx.raw.toLocaleString('de-DE')
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: v => '€' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v) }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function renderEmployerBreakdown() {
+        const empMap = {};
+        const empCount = {};
+        data.entries.forEach(e => {
+            empMap[e.employer] = (empMap[e.employer] || 0) + e.amount;
+            empCount[e.employer] = (empCount[e.employer] || 0) + 1;
+        });
+
+        const sorted = Object.entries(empMap).sort((a, b) => b[1] - a[1]);
+        const container = document.getElementById('employerBreakdown');
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No employer data yet.</p></div>';
+            return;
+        }
+
+        container.innerHTML = sorted.map(([name, amount]) => `
+            <div class="employer-item">
+                <div>
+                    <div class="name">${name}</div>
+                    <div class="count">${empCount[name]} payments</div>
+                </div>
+                <div class="amount">${formatCurrency(amount)}</div>
+            </div>
+        `).join('');
+    }
+
+    function renderEntries() {
+        const filterEmp = document.getElementById('filterEmployer').value;
+        const filterYear = document.getElementById('filterYear').value;
+        const filterMonth = document.getElementById('filterMonth').value;
+
+        let filtered = data.entries;
+
+        if (filterEmp) filtered = filtered.filter(e => e.employer === filterEmp);
+        if (filterYear) filtered = filtered.filter(e => e.date.startsWith(filterYear));
+        if (filterMonth !== '') {
+            filtered = filtered.filter(e => new Date(e.date).getMonth() === parseInt(filterMonth));
+        }
+
+        const body = document.getElementById('entriesBody');
+        const empty = document.getElementById('emptyEntries');
+
+        if (filtered.length === 0) {
+            body.innerHTML = '';
+            empty.style.display = 'block';
+        } else {
+            empty.style.display = 'none';
+            body.innerHTML = filtered.map(e => `
+                <tr>
+                    <td>${formatDate(e.date)}</td>
+                    <td>${e.employer}</td>
+                    <td class="amount-cell">€${e.amount.toLocaleString('de-DE')}</td>
+                    <td>${e.notes || '-'}</td>
+                    <td><button class="delete-btn" onclick="deleteEntry('${e.id}')" title="Delete">✕</button></td>
+                </tr>
+            `).join('');
+        }
+
+        const total = filtered.reduce((s, e) => s + e.amount, 0);
+        document.getElementById('filteredTotal').textContent =
+            `Showing ${filtered.length} entries | Total: ${formatCurrency(total)}`;
+    }
+
+    function updateEmployerDropdowns() {
+        const employers = [...new Set(data.entries.map(e => e.employer))].sort();
+
+        // Entry form
+        const sel = document.getElementById('entryEmployer');
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Select or type new...</option>' +
+            employers.map(e => `<option value="${e}" ${e === current ? 'selected' : ''}>${e}</option>`).join('');
+
+        // Filter
+        const fSel = document.getElementById('filterEmployer');
+        const fCurrent = fSel.value;
+        fSel.innerHTML = '<option value="">All Employers</option>' +
+            employers.map(e => `<option value="${e}" ${e === fCurrent ? 'selected' : ''}>${e}</option>`).join('');
+
+        // Year filter
+        const years = [...new Set(data.entries.map(e => e.date.substring(0, 4)))].sort().reverse();
+        const ySel = document.getElementById('filterYear');
+        const yCurrent = ySel.value;
+        ySel.innerHTML = '<option value="">All Years</option>' +
+            years.map(y => `<option value="${y}" ${y === yCurrent ? 'selected' : ''}>${y}</option>`).join('');
+    }
+
+    // ===== TABS =====
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    // ===== SETTINGS =====
+    function openSettings() {
+        document.getElementById('ghUser').value = config.ghUser || '';
+        document.getElementById('ghRepo').value = config.ghRepo || '';
+        document.getElementById('ghToken').value = config.ghToken || '';
+        document.getElementById('ghPath').value = config.ghPath || 'data.json';
+        document.getElementById('settingsModal').classList.add('active');
+    }
+
+    function closeSettings() {
+        document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    function saveSettings() {
+        config.ghUser = document.getElementById('ghUser').value.trim();
+        config.ghRepo = document.getElementById('ghRepo').value.trim();
+        config.ghToken = document.getElementById('ghToken').value.trim();
+        config.ghPath = document.getElementById('ghPath').value.trim() || 'data.json';
+        saveConfig();
+        closeSettings();
+
+        if (config.ghToken) {
+            fetchFromGitHub();
+        }
+        showToast('Settings saved!');
+    }
+
+    // ===== HELPERS =====
+    function formatCurrency(n) {
+        return '€' + n.toLocaleString('de-DE', { maximumFractionDigits: 0 });
+    }
+
+    function formatDate(d) {
+        return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+    }
+
+    function setDefaultDate() {
+        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+    }
+
+    function clearForm() {
+        document.getElementById('entryAmount').value = '';
+        document.getElementById('entryEmployer').value = '';
+        document.getElementById('newEmployer').value = '';
+        document.getElementById('entryNotes').value = '';
+        setDefaultDate();
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function exportCSV() {
+        const rows = [['Date', 'Employer', 'Amount', 'Notes']];
+        data.entries.forEach(e => rows.push([e.date, e.employer, e.amount, e.notes || '']));
+        const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'earntrack_export.csv';
+        a.click();
+    }
+
+    // ===== SERVICE WORKER =====
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('SW registered'))
+            .catch(e => console.log('SW error:', e));
+    }
+
+    // ===== START =====
+    init();
+    </script>
+</body>
+</html>
