@@ -629,6 +629,7 @@
             </p>
             <div class="btn-row">
                 <button class="btn btn-outline" onclick="closeSettings()">Cancel</button>
+                <button class="btn btn-outline" onclick="checkForUpdates()" style="border-color:var(--warning);color:var(--warning);">🔄 Check Updates</button>
                 <button class="btn btn-primary" onclick="saveSettings()">Save &amp; Sync</button>
             </div>
         </div>
@@ -680,6 +681,26 @@
                 fetchFromGitHub();
             }
         });
+    }
+
+    async function checkForUpdates() {
+        showToast('Checking for updates...');
+        try {
+            // Unregister all service workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(r => r.unregister()));
+            }
+            // Clear all caches
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            // Hard reload
+            window.location.reload(true);
+        } catch(e) {
+            window.location.reload(true);
+        }
     }
 
     function manualSync() {
