@@ -1,31 +1,199 @@
 {
   "entries": [
-    {"id":"mmonsty46652y","date":"2026-03-11","amount":126.19,"employer":"Zara","notes":""},
-    {"id":"mmonsl2b4sfhj","date":"2026-03-06","amount":121,"employer":"Bus Volunteer","notes":""},
-    {"id":"mmonsdo4pbns9","date":"2026-03-04","amount":56.09,"employer":"Zara","notes":""},
-    {"id":"mmons1t21q14o","date":"2026-02-25","amount":56.09,"employer":"Zara","notes":""},
-    {"id":"mmonrsgdnz2pc","date":"2026-02-18","amount":84.13,"employer":"Zara","notes":""},
-    {"id":"mmonreehm0y08","date":"2026-02-11","amount":56.09,"employer":"Zara","notes":""},
-    {"id":"mmonr4bts21yp","date":"2026-02-10","amount":137.5,"employer":"Bus Volunteer","notes":""},
-    {"id":"mmonqx0o9yk8w","date":"2026-02-04","amount":111.69,"employer":"Zara","notes":""},
-    {"id":"mmonqgdz538ct","date":"2026-01-30","amount":42.06,"employer":"Zara","notes":""},
-    {"id":"mmonpxbnwiwiu","date":"2026-01-21","amount":56.09,"employer":"PostNL","notes":""},
-    {"id":"mmonpl51lfqym","date":"2026-01-14","amount":164.7,"employer":"PostNL","notes":""},
-    {"id":"mmonp73o8zjzo","date":"2026-01-13","amount":55,"employer":"Bus Volunteer","notes":""},
-    {"id":"mmonosssfgk5b","date":"2026-01-07","amount":288.49,"employer":"PostNL","notes":""},
-    {"id":"mmonoidodc8b9","date":"2026-01-02","amount":177,"employer":"PostNL","notes":""},
-    {"id":"mmono0gv0j34b","date":"2025-12-31","amount":45.7,"employer":"PostNL","notes":""},
-    {"id":"mmonnnhi5a10k","date":"2025-12-24","amount":332.8,"employer":"PostNL","notes":""},
-    {"id":"mmonnd2mps41d","date":"2025-12-17","amount":403.77,"employer":"PostNL","notes":""},
-    {"id":"mmonn2ecymj0c","date":"2025-12-12","amount":104.5,"employer":"Bus Volunteer","notes":""},
-    {"id":"mmonmrmriro8r","date":"2025-12-10","amount":512.12,"employer":"PostNL","notes":""},
-    {"id":"mmonmf9n310ra","date":"2025-12-03","amount":714.74,"employer":"PostNL","notes":""},
-    {"id":"mmoml3en91tnv","date":"2025-11-26","amount":395.09,"employer":"PostNL","notes":""},
-    {"id":"mmomkqg4youcx","date":"2025-11-19","amount":335.39,"employer":"PostNL","notes":""},
-    {"id":"mmomk5x3nwj6h","date":"2025-11-16","amount":74,"employer":"Mumbai Stories","notes":""},
-    {"id":"mmomjlhwh6e2s","date":"2025-11-12","amount":119.85,"employer":"PostNL","notes":""},
-    {"id":"mmomj3c2lxslc","date":"2025-11-10","amount":77,"employer":"Bus Volunteer","notes":""},
-    {"id":"mmomi974h325v","date":"2025-09-09","amount":55,"employer":"Bus Volunteer","notes":""}
+    {
+      "id": "mmonsty46652y",
+      "date": "2026-03-11",
+      "amount": 126.19,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmonsl2b4sfhj",
+      "date": "2026-03-06",
+      "amount": 121,
+      "employer": "Bus Volunteer",
+      "notes": ""
+    },
+    {
+      "id": "mmonsdo4pbns9",
+      "date": "2026-03-04",
+      "amount": 56.09,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmons1t21q14o",
+      "date": "2026-02-25",
+      "amount": 56.09,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmonrsgdnz2pc",
+      "date": "2026-02-18",
+      "amount": 84.13,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmonreehm0y08",
+      "date": "2026-02-11",
+      "amount": 56.09,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmonr4bts21yp",
+      "date": "2026-02-10",
+      "amount": 137.5,
+      "employer": "Bus Volunteer",
+      "notes": ""
+    },
+    {
+      "id": "mmonqx0o9yk8w",
+      "date": "2026-02-04",
+      "amount": 111.69,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmonqgdz538ct",
+      "date": "2026-01-30",
+      "amount": 42.06,
+      "employer": "Zara",
+      "notes": ""
+    },
+    {
+      "id": "mmonpxbnwiwiu",
+      "date": "2026-01-21",
+      "amount": 56.09,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonpl51lfqym",
+      "date": "2026-01-14",
+      "amount": 164.7,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonp73o8zjzo",
+      "date": "2026-01-13",
+      "amount": 55,
+      "employer": "Bus Volunteer",
+      "notes": ""
+    },
+    {
+      "id": "mmonosssfgk5b",
+      "date": "2026-01-07",
+      "amount": 288.49,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonoidodc8b9",
+      "date": "2026-01-02",
+      "amount": 177,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmono0gv0j34b",
+      "date": "2025-12-31",
+      "amount": 45.7,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonnnhi5a10k",
+      "date": "2025-12-24",
+      "amount": 332.8,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonnd2mps41d",
+      "date": "2025-12-17",
+      "amount": 403.77,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonn2ecymj0c",
+      "date": "2025-12-12",
+      "amount": 104.5,
+      "employer": "Bus Volunteer",
+      "notes": ""
+    },
+    {
+      "id": "mmonmrmriro8r",
+      "date": "2025-12-10",
+      "amount": 512.12,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmonmf9n310ra",
+      "date": "2025-12-03",
+      "amount": 714.74,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmoml3en91tnv",
+      "date": "2025-11-26",
+      "amount": 395.09,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmomkqg4youcx",
+      "date": "2025-11-19",
+      "amount": 335.39,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmomk5x3nwj6h",
+      "date": "2025-11-16",
+      "amount": 74,
+      "employer": "Mumbai Stories",
+      "notes": ""
+    },
+    {
+      "id": "mmomjlhwh6e2s",
+      "date": "2025-11-12",
+      "amount": 119.85,
+      "employer": "PostNL",
+      "notes": ""
+    },
+    {
+      "id": "mmp85yyboir5p",
+      "date": "2025-11-11",
+      "amount": 100,
+      "employer": "Mumbai Stories",
+      "notes": ""
+    },
+    {
+      "id": "mmomj3c2lxslc",
+      "date": "2025-11-10",
+      "amount": 77,
+      "employer": "Bus Volunteer",
+      "notes": ""
+    },
+    {
+      "id": "mmomi974h325v",
+      "date": "2025-09-09",
+      "amount": 55,
+      "employer": "Bus Volunteer",
+      "notes": ""
+    }
   ],
-  "employers": ["Bus Volunteer", "PostNL", "Mumbai Stories", "Zara"]
+  "employers": [
+    "Bus Volunteer",
+    "PostNL",
+    "Mumbai Stories",
+    "Zara"
+  ]
 }
