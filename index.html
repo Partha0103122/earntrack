@@ -168,6 +168,23 @@
             margin-bottom: 12px;
         }
 
+        .period-btn {
+            padding: 4px 10px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .period-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
         .chart-wrapper {
             position: relative;
             height: 320px;
@@ -475,7 +492,20 @@
             </div>
 
             <div class="chart-card">
-                <h3>Monthly Earnings</h3>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                    <h3 style="margin:0;" id="barChartTitle">Monthly Earnings</h3>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <select id="chartEmployerFilter" onchange="renderCharts()" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.8rem;background:white;">
+                            <option value="">All Employers</option>
+                        </select>
+                        <div style="display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px;border:1.5px solid var(--border);">
+                            <button class="period-btn active" onclick="setPeriod('daily')">Day</button>
+                            <button class="period-btn" onclick="setPeriod('weekly')">Week</button>
+                            <button class="period-btn active" onclick="setPeriod('monthly')">Month</button>
+                            <button class="period-btn" onclick="setPeriod('yearly')">Year</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="chart-wrapper">
                     <canvas id="monthlyChart"></canvas>
                 </div>
@@ -992,22 +1022,65 @@
         return '₹' + Math.round(inr).toLocaleString('en-IN');
     }
 
+    let currentPeriod = 'monthly';
+
+    function setPeriod(period) {
+        currentPeriod = period;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        renderCharts();
+    }
+
+    function getWeekKey(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        const startOfYear = new Date(d.getFullYear(), 0, 1);
+        const week = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+        return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+    }
+
     function renderCharts() {
-        // Build month map
-        const monthMap = {};
-        data.entries.forEach(e => {
-            const key = e.date.substring(0, 7);
-            monthMap[key] = (monthMap[key] || 0) + e.amount;
+        const employerFilter = document.getElementById('chartEmployerFilter')?.value || '';
+        let entries = data.entries;
+        if (employerFilter) entries = entries.filter(e => e.employer === employerFilter);
+
+        // Build period map
+        const periodMap = {};
+        entries.forEach(e => {
+            let key;
+            if (currentPeriod === 'daily') {
+                key = e.date;
+            } else if (currentPeriod === 'weekly') {
+                key = getWeekKey(e.date);
+            } else if (currentPeriod === 'monthly') {
+                key = e.date.substring(0, 7);
+            } else {
+                key = e.date.substring(0, 4);
+            }
+            periodMap[key] = (periodMap[key] || 0) + e.amount;
         });
 
-        const sortedMonths = Object.keys(monthMap).sort();
-        const labels = sortedMonths.map(m => {
-            const [y, mo] = m.split('-');
-            return new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
-        });
-        const values = sortedMonths.map(m => monthMap[m]);
+        const sortedKeys = Object.keys(periodMap).sort();
 
-        // Monthly bar chart — tilt labels to avoid overlap
+        const labels = sortedKeys.map(k => {
+            if (currentPeriod === 'daily') {
+                return new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            } else if (currentPeriod === 'weekly') {
+                return k.replace('-', ' ');
+            } else if (currentPeriod === 'monthly') {
+                const [y, mo] = k.split('-');
+                return new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+            } else {
+                return k;
+            }
+        });
+
+        const values = sortedKeys.map(k => periodMap[k]);
+
+        const periodTitles = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+        const empLabel = employerFilter ? ` — ${employerFilter}` : '';
+        document.getElementById('barChartTitle').textContent = `${periodTitles[currentPeriod]} Earnings${empLabel}`;
+
+        // Bar chart
         if (monthlyChart) monthlyChart.destroy();
         const ctx1 = document.getElementById('monthlyChart').getContext('2d');
         monthlyChart = new Chart(ctx1, {
@@ -1026,16 +1099,10 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: {
-                    padding: { top: 20, bottom: 10 }
-                },
+                layout: { padding: { top: 20, bottom: 10 } },
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => '€' + ctx.raw.toLocaleString('de-DE')
-                        }
-                    },
+                    tooltip: { callbacks: { label: ctx => '€' + ctx.raw.toLocaleString('de-DE') } },
                     datalabels: {
                         anchor: 'end',
                         align: 'end',
@@ -1046,31 +1113,31 @@
                 },
                 scales: {
                     x: {
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45,
-                            autoSkip: false,
-                            font: { size: 10 },
-                            color: '#64748b'
-                        },
+                        ticks: { maxRotation: 45, minRotation: 45, autoSkip: false, font: { size: 10 }, color: '#64748b' },
                         grid: { display: false }
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            callback: v => '€' + v.toLocaleString('de-DE'),
-                            font: { size: 10 },
-                            color: '#64748b'
-                        }
+                        ticks: { callback: v => '€' + v.toLocaleString('de-DE'), font: { size: 10 }, color: '#64748b' }
                     }
                 }
             },
             plugins: [ChartDataLabels]
         });
 
-        // Cumulative line chart
+        // Cumulative line chart (always monthly, respects employer filter)
+        const monthMap = {};
+        entries.forEach(e => {
+            const key = e.date.substring(0, 7);
+            monthMap[key] = (monthMap[key] || 0) + e.amount;
+        });
+        const sortedMonths = Object.keys(monthMap).sort();
+        const monthLabels = sortedMonths.map(m => {
+            const [y, mo] = m.split('-');
+            return new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+        });
         let running = 0;
-        const cumulativeValues = values.map(v => { running += v; return running; });
+        const cumulativeValues = sortedMonths.map(m => { running += monthMap[m]; return running; });
 
         if (cumulativeChart) cumulativeChart.destroy();
         if (sortedMonths.length > 0) {
@@ -1078,7 +1145,7 @@
             cumulativeChart = new Chart(ctx2, {
                 type: 'line',
                 data: {
-                    labels,
+                    labels: monthLabels,
                     datasets: [{
                         label: 'Cumulative (€)',
                         data: cumulativeValues,
@@ -1095,16 +1162,10 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    layout: {
-                        padding: { top: 20, bottom: 10 }
-                    },
+                    layout: { padding: { top: 20, bottom: 10 } },
                     plugins: {
                         legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => 'Total: €' + ctx.raw.toLocaleString('de-DE')
-                            }
-                        },
+                        tooltip: { callbacks: { label: ctx => 'Total: €' + ctx.raw.toLocaleString('de-DE') } },
                         datalabels: {
                             anchor: 'top',
                             align: 'top',
@@ -1115,22 +1176,12 @@
                     },
                     scales: {
                         x: {
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45,
-                                autoSkip: false,
-                                font: { size: 10 },
-                                color: '#64748b'
-                            },
+                            ticks: { maxRotation: 45, minRotation: 45, autoSkip: false, font: { size: 10 }, color: '#64748b' },
                             grid: { display: false }
                         },
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                callback: v => '€' + v.toLocaleString('de-DE'),
-                                font: { size: 10 },
-                                color: '#64748b'
-                            }
+                            ticks: { callback: v => '€' + v.toLocaleString('de-DE'), font: { size: 10 }, color: '#64748b' }
                         }
                     }
                 },
@@ -1138,10 +1189,10 @@
             });
         }
 
-        renderMonthlyTable(sortedMonths, monthMap, values);
+        renderMonthlyTable(sortedMonths, monthMap);
     }
 
-    function renderMonthlyTable(sortedMonths, monthMap, values) {
+    function renderMonthlyTable(sortedMonths, monthMap) {
         const container = document.getElementById('monthlyTable');
         if (sortedMonths.length === 0) {
             container.innerHTML = '<div class="empty-state"><p>No monthly data yet.</p></div>';
@@ -1240,7 +1291,15 @@
         sel.innerHTML = '<option value="">Select or type new...</option>' +
             employers.map(e => `<option value="${e}" ${e === current ? 'selected' : ''}>${e}</option>`).join('');
 
-        // Filter
+        // Chart employer filter
+        const cSel = document.getElementById('chartEmployerFilter');
+        const cCurrent = cSel ? cSel.value : '';
+        if (cSel) {
+            cSel.innerHTML = '<option value="">All Employers</option>' +
+                employers.map(e => `<option value="${e}" ${e === cCurrent ? 'selected' : ''}>${e}</option>`).join('');
+        }
+
+        // Entries filter
         const fSel = document.getElementById('filterEmployer');
         const fCurrent = fSel.value;
         fSel.innerHTML = '<option value="">All Employers</option>' +
