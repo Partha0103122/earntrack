@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "id": "mnqa8ltyvdizx",
+      "date": "2026-04-01",
+      "amount": 779.83,
+      "employer": "SVB",
+      "notes": ""
+    },
+    {
       "id": "mn5tmhyvwr3g8",
       "date": "2026-03-25",
       "amount": 98.15,
@@ -208,6 +215,7 @@
     "Bus Volunteer",
     "PostNL",
     "Mumbai Stories",
-    "Zara"
+    "Zara",
+    "SVB"
   ]
 }
