@@ -1,4 +1,4 @@
-const CACHE_NAME = 'earntrack-v5';
+const CACHE_NAME = 'earntrack-v6';
 const ASSETS = [
     './',
     './index.html',
@@ -28,14 +28,14 @@ self.addEventListener('activate', e => {
 });
 
 // Fetch strategy:
-// - GitHub API calls: always network only (never cache, never intercept)
+// - GitHub/exchange-rate API calls: always network only (never cache, never intercept)
 // - data.json: always network only (data must be fresh)
 // - App shell assets: cache first, fallback to network
 self.addEventListener('fetch', e => {
     const url = e.request.url;
 
     // Never intercept GitHub API calls — let them pass through untouched
-    if (url.includes('api.github.com')) {
+    if (url.includes('api.github.com') || url.includes('api.frankfurter.dev')) {
         return;
     }
 

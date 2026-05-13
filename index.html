@@ -655,12 +655,8 @@
                 <label>Data File Path</label>
                 <input type="text" id="ghPath" placeholder="data.json" value="data.json">
             </div>
-            <div class="form-group">
-                <label>Wise API Token</label>
-                <input type="password" id="wiseToken" placeholder="Wise personal API token">
-            </div>
             <p style="font-size:0.78rem;color:var(--text-muted);margin-top:8px;">
-                GitHub token needs <strong>repo</strong> scope. Wise token is used only to fetch the live EUR to INR rate.
+                GitHub token needs <strong>repo</strong> scope. EUR to INR conversion uses the latest public exchange rate.
             </p>
             <div class="btn-row">
                 <button class="btn btn-outline" onclick="closeSettings()">Cancel</button>
@@ -687,8 +683,8 @@
     <script>
     // ===== STATE =====
     let data = { entries: [], employers: [] };
-    let config = { ghUser: '', ghRepo: '', ghToken: '', ghPath: 'data.json', wiseToken: '' };
-    let exchangeRate = { eurToInr: null, updatedAt: null, source: 'Wise' };
+    let config = { ghUser: '', ghRepo: '', ghToken: '', ghPath: 'data.json' };
+    let exchangeRate = { eurToInr: null, updatedAt: null, source: 'Frankfurter' };
     let pendingDeleteId = null;
     let monthlyChart = null;
     let cumulativeChart = null;
@@ -699,17 +695,20 @@
         loadLocalData();
         setDefaultDate();
         render();
-        fetchWiseRate();
+        fetchExchangeRate();
         if (config.ghToken) {
             fetchFromGitHub();
+        } else {
+            fetchPublicData();
         }
 
         // Re-sync when app returns to foreground (critical for mobile PWA)
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && config.ghToken) {
-                fetchFromGitHub();
+            if (!document.hidden) {
+                if (config.ghToken) fetchFromGitHub();
+                else fetchPublicData();
             }
-            fetchWiseRate();
+            fetchExchangeRate();
         });
 
         // Re-sync when coming back online
@@ -717,6 +716,8 @@
             if (config.ghToken) {
                 showToast('Back online — syncing...');
                 fetchFromGitHub();
+            } else {
+                fetchPublicData();
             }
         });
     }
@@ -743,8 +744,7 @@
 
     function manualSync() {
         if (!config.ghToken) {
-            showToast('Configure GitHub settings first');
-            openSettings();
+            fetchPublicData(true);
             return;
         }
         fetchFromGitHub();
@@ -775,41 +775,69 @@
         localStorage.setItem('earntrack_config', JSON.stringify(config));
     }
 
-    async function fetchWiseRate(showSuccess = false) {
-        if (!config.wiseToken) {
-            if (showSuccess) showToast('Add a Wise API token to fetch INR rate');
-            return;
-        }
+    function applyRemoteData(remoteData) {
+        const remoteEntries = Array.isArray(remoteData.entries) ? remoteData.entries : [];
+        const remoteEmployers = Array.isArray(remoteData.employers) ? remoteData.employers : [];
+        const entriesById = new Map();
+
+        [...data.entries, ...remoteEntries].forEach(entry => {
+            if (entry && entry.id) entriesById.set(entry.id, entry);
+        });
+
+        data = {
+            entries: Array.from(entriesById.values()).sort((a, b) => b.date.localeCompare(a.date)),
+            employers: [...new Set([...data.employers, ...remoteEmployers, ...remoteEntries.map(e => e.employer).filter(Boolean)])].sort()
+        };
+        saveLocalData();
+        render();
+    }
+
+    async function fetchPublicData(showSuccess = false) {
+        setSyncStatus('pending', 'Loading...');
 
         try {
-            const resp = await fetch('https://api.wise.com/v1/rates?source=EUR&target=INR', {
-                headers: {
-                    'Authorization': `Bearer ${config.wiseToken}`,
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
-                }
+            const resp = await fetch(`data.json?ts=${Date.now()}`, {
+                headers: { 'Cache-Control': 'no-cache' }
             });
 
-            if (!resp.ok) throw new Error(`Wise rate HTTP ${resp.status}`);
+            if (!resp.ok) throw new Error(`data.json HTTP ${resp.status}`);
 
-            const rates = await resp.json();
-            const route = Array.isArray(rates) ? rates[0] : rates;
-            const rate = Number(route?.rate);
+            const remoteData = await resp.json();
+            applyRemoteData(remoteData);
+            setSyncStatus('ok', 'Loaded');
+            if (showSuccess) showToast('Loaded data.json');
+        } catch (e) {
+            console.error('Public data load error:', e);
+            setSyncStatus('error', 'Load failed');
+            if (showSuccess) showToast('Could not load data.json');
+        }
+    }
+
+    async function fetchExchangeRate(showSuccess = false) {
+        try {
+            const resp = await fetch('https://api.frankfurter.dev/v2/rate/EUR/INR', {
+                headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+            });
+
+            if (!resp.ok) throw new Error(`Exchange rate HTTP ${resp.status}`);
+
+            const result = await resp.json();
+            const rate = Number(result.rate);
 
             if (!Number.isFinite(rate) || rate <= 0) {
-                throw new Error('Wise returned an invalid EUR to INR rate');
+                throw new Error('Exchange API returned an invalid EUR to INR rate');
             }
 
             exchangeRate = {
                 eurToInr: rate,
-                updatedAt: route.time || new Date().toISOString(),
-                source: 'Wise'
+                updatedAt: result.date || new Date().toISOString(),
+                source: 'Frankfurter'
             };
             render();
-            if (showSuccess) showToast('Wise EUR to INR rate updated');
+            if (showSuccess) showToast('EUR to INR rate updated');
         } catch (e) {
-            console.error('Wise rate error:', e);
-            if (showSuccess) showToast('Could not update Wise rate');
+            console.error('Exchange rate error:', e);
+            if (showSuccess) showToast('Could not update EUR to INR rate');
         }
     }
 
@@ -848,7 +876,8 @@
                 showToast('GitHub token invalid or expired');
             } else if (resp.status === 404) {
                 // File doesn't exist yet — push local data up
-                await pushToGitHub();
+                setSyncStatus('error', 'File missing');
+                showToast('Cloud data file not found');
             } else {
                 throw new Error(`HTTP ${resp.status}`);
             }
@@ -865,6 +894,7 @@
         try {
             // Get current file SHA if it exists
             let sha = null;
+            let remoteEntries = [];
             try {
                 const resp = await fetch(
                     `https://api.github.com/repos/${config.ghUser}/${config.ghRepo}/contents/${config.ghPath}`,
@@ -873,8 +903,23 @@
                 if (resp.ok) {
                     const file = await resp.json();
                     sha = file.sha;
+                    const jsonStr = decodeURIComponent(escape(atob(file.content.replace(/\s/g, ''))));
+                    const remoteData = JSON.parse(jsonStr);
+                    remoteEntries = Array.isArray(remoteData.entries) ? remoteData.entries : [];
                 }
             } catch(e) {}
+
+            if (data.entries.length === 0 && remoteEntries.length > 0) {
+                setSyncStatus('error', 'Save blocked');
+                showToast('Blank data not uploaded. Sync first.');
+                return;
+            }
+
+            if (data.entries.length === 0 && !sha) {
+                setSyncStatus('error', 'Save blocked');
+                showToast('Blank data not uploaded');
+                return;
+            }
 
             // Use a robust base64 encode that handles unicode correctly
             const jsonString = JSON.stringify(data, null, 2);
@@ -1061,7 +1106,7 @@
 
     function toINR(eur) {
         if (!Number.isFinite(exchangeRate.eurToInr) || exchangeRate.eurToInr <= 0) {
-            return 'Wise rate unavailable';
+            return 'Exchange rate unavailable';
         }
         const inr = eur * exchangeRate.eurToInr;
         return '₹' + Math.round(inr).toLocaleString('en-IN');
@@ -1372,7 +1417,6 @@
         document.getElementById('ghRepo').value = config.ghRepo || '';
         document.getElementById('ghToken').value = config.ghToken || '';
         document.getElementById('ghPath').value = config.ghPath || 'data.json';
-        document.getElementById('wiseToken').value = config.wiseToken || '';
         document.getElementById('settingsModal').classList.add('active');
     }
 
@@ -1385,13 +1429,14 @@
         config.ghRepo = document.getElementById('ghRepo').value.trim();
         config.ghToken = document.getElementById('ghToken').value.trim();
         config.ghPath = document.getElementById('ghPath').value.trim() || 'data.json';
-        config.wiseToken = document.getElementById('wiseToken').value.trim();
         saveConfig();
         closeSettings();
 
-        fetchWiseRate(true);
+        fetchExchangeRate(true);
         if (config.ghToken) {
             fetchFromGitHub();
+        } else {
+            fetchPublicData(true);
         }
         showToast('Settings saved!');
     }
