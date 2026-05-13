@@ -655,8 +655,12 @@
                 <label>Data File Path</label>
                 <input type="text" id="ghPath" placeholder="data.json" value="data.json">
             </div>
+            <div class="form-group">
+                <label>Wise API Token</label>
+                <input type="password" id="wiseToken" placeholder="Wise personal API token">
+            </div>
             <p style="font-size:0.78rem;color:var(--text-muted);margin-top:8px;">
-                Token needs <strong>repo</strong> scope. Data is stored in your browser &amp; synced to GitHub.
+                GitHub token needs <strong>repo</strong> scope. Wise token is used only to fetch the live EUR to INR rate.
             </p>
             <div class="btn-row">
                 <button class="btn btn-outline" onclick="closeSettings()">Cancel</button>
@@ -683,7 +687,8 @@
     <script>
     // ===== STATE =====
     let data = { entries: [], employers: [] };
-    let config = { ghUser: '', ghRepo: '', ghToken: '', ghPath: 'data.json' };
+    let config = { ghUser: '', ghRepo: '', ghToken: '', ghPath: 'data.json', wiseToken: '' };
+    let exchangeRate = { eurToInr: null, updatedAt: null, source: 'Wise' };
     let pendingDeleteId = null;
     let monthlyChart = null;
     let cumulativeChart = null;
@@ -694,6 +699,7 @@
         loadLocalData();
         setDefaultDate();
         render();
+        fetchWiseRate();
         if (config.ghToken) {
             fetchFromGitHub();
         }
@@ -703,6 +709,7 @@
             if (!document.hidden && config.ghToken) {
                 fetchFromGitHub();
             }
+            fetchWiseRate();
         });
 
         // Re-sync when coming back online
@@ -766,6 +773,44 @@
 
     function saveConfig() {
         localStorage.setItem('earntrack_config', JSON.stringify(config));
+    }
+
+    async function fetchWiseRate(showSuccess = false) {
+        if (!config.wiseToken) {
+            if (showSuccess) showToast('Add a Wise API token to fetch INR rate');
+            return;
+        }
+
+        try {
+            const resp = await fetch('https://api.wise.com/v1/rates?source=EUR&target=INR', {
+                headers: {
+                    'Authorization': `Bearer ${config.wiseToken}`,
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            if (!resp.ok) throw new Error(`Wise rate HTTP ${resp.status}`);
+
+            const rates = await resp.json();
+            const route = Array.isArray(rates) ? rates[0] : rates;
+            const rate = Number(route?.rate);
+
+            if (!Number.isFinite(rate) || rate <= 0) {
+                throw new Error('Wise returned an invalid EUR to INR rate');
+            }
+
+            exchangeRate = {
+                eurToInr: rate,
+                updatedAt: route.time || new Date().toISOString(),
+                source: 'Wise'
+            };
+            render();
+            if (showSuccess) showToast('Wise EUR to INR rate updated');
+        } catch (e) {
+            console.error('Wise rate error:', e);
+            if (showSuccess) showToast('Could not update Wise rate');
+        }
     }
 
     // ===== GITHUB SYNC =====
@@ -1014,11 +1059,11 @@
         document.getElementById('employerCount').textContent = employers.size;
     }
 
-    // EUR to INR conversion rate
-    const EUR_TO_INR = 90.5;
-
     function toINR(eur) {
-        const inr = eur * EUR_TO_INR;
+        if (!Number.isFinite(exchangeRate.eurToInr) || exchangeRate.eurToInr <= 0) {
+            return 'Wise rate unavailable';
+        }
+        const inr = eur * exchangeRate.eurToInr;
         return '₹' + Math.round(inr).toLocaleString('en-IN');
     }
 
@@ -1327,6 +1372,7 @@
         document.getElementById('ghRepo').value = config.ghRepo || '';
         document.getElementById('ghToken').value = config.ghToken || '';
         document.getElementById('ghPath').value = config.ghPath || 'data.json';
+        document.getElementById('wiseToken').value = config.wiseToken || '';
         document.getElementById('settingsModal').classList.add('active');
     }
 
@@ -1339,9 +1385,11 @@
         config.ghRepo = document.getElementById('ghRepo').value.trim();
         config.ghToken = document.getElementById('ghToken').value.trim();
         config.ghPath = document.getElementById('ghPath').value.trim() || 'data.json';
+        config.wiseToken = document.getElementById('wiseToken').value.trim();
         saveConfig();
         closeSettings();
 
+        fetchWiseRate(true);
         if (config.ghToken) {
             fetchFromGitHub();
         }
