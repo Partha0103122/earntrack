@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "id": "mrdztg2w99d9b",
+      "date": "2026-07-08",
+      "amount": 68.12,
+      "employer": "Bosman",
+      "notes": ""
+    },
+    {
       "id": "mrdzszp12j1bd",
       "date": "2026-07-06",
       "amount": 170,
@@ -356,6 +363,7 @@
     "PostNL",
     "Mumbai Stories",
     "Zara",
-    "SVB"
+    "SVB",
+    "Bosman"
   ]
 }
