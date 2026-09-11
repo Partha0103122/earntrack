@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "id": "mtx576m5zuzu7",
+      "date": "2026-09-11",
+      "amount": 199,
+      "employer": "Income tax refund",
+      "notes": ""
+    },
+    {
       "id": "mtx56bqdg26wv",
       "date": "2026-09-09",
       "amount": 157.06,
@@ -448,6 +455,7 @@
     "Mumbai Stories",
     "Zara",
     "SVB",
-    "Bosman"
+    "Bosman",
+    "Income tax refund"
   ]
 }
