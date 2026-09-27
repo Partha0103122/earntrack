@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "id": "mujskxzuofx09",
+      "date": "2026-09-26",
+      "amount": 561.49,
+      "employer": "Fluke",
+      "notes": ""
+    },
+    {
       "id": "mujsk7sxvlq66",
       "date": "2026-09-16",
       "amount": 128.49,
@@ -470,6 +477,7 @@
     "Zara",
     "SVB",
     "Bosman",
-    "Income tax refund"
+    "Income tax refund",
+    "Fluke"
   ]
 }
